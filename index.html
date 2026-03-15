@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ReviewLens — Understand any GitHub PR in 30 seconds</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300;1,9..144,600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0e1117;
+  --surface: #161b22;
+  --surface2: #1c2128;
+  --border: #30363d;
+  --border-subtle: #21262d;
+  --text: #e6edf3;
+  --muted: #7d8590;
+  --green: #3fb950;
+  --green-bg: rgba(63,185,80,0.08);
+  --blue: #58a6ff;
+  --orange: #f0883e;
+  --red: #f85149;
+  --mono: 'Geist Mono', monospace;
+  --serif: 'Fraunces', Georgia, serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:14px;line-height:1.6;overflow-x:hidden;}
+
+nav{border-bottom:1px solid var(--border-subtle);padding:0 40px;height:52px;display:flex;align-items:center;justify-content:space-between;background:rgba(14,17,23,0.96);backdrop-filter:blur(12px);position:sticky;top:0;z-index:100;}
+.logo{display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px;}
+.logo-icon{width:26px;height:26px;background:var(--green);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:13px;color:#0e1117;font-weight:700;}
+.logo span{color:var(--muted);font-weight:300;}
+.nav-cta{background:var(--green);color:#0e1117;padding:6px 14px;border-radius:5px;font-weight:600;font-size:12px;text-decoration:none;transition:background 0.15s;}
+.nav-cta:hover{background:#46c957;}
+
+/* HERO */
+.hero{max-width:860px;margin:0 auto;padding:72px 40px 64px;text-align:center;}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;background:var(--green-bg);border:1px solid rgba(63,185,80,0.15);border-radius:20px;padding:5px 14px;font-size:12px;color:var(--green);margin-bottom:28px;}
+.eyebrow::before{content:'';width:6px;height:6px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
+
+h1{font-family:var(--serif);font-size:clamp(36px,5.5vw,68px);line-height:1.05;font-weight:600;letter-spacing:-0.02em;margin-bottom:16px;}
+h1 em{font-style:italic;font-weight:300;color:var(--green);}
+
+/* ← CHANGED: no-setup line moved directly under h1 */
+.no-setup{font-size:12px;color:var(--muted);margin-bottom:20px;letter-spacing:0.02em;}
+.no-setup span{color:var(--border);margin:0 8px;}
+
+.subhead{font-size:16px;color:var(--muted);max-width:540px;margin:0 auto 16px;line-height:1.7;}
+.subhead strong{color:var(--text);font-weight:500;}
+
+.trust-line{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin-bottom:36px;background:var(--surface);border:1px solid var(--border-subtle);padding:6px 14px;border-radius:6px;}
+
+.signup-wrap{display:flex;gap:8px;max-width:440px;margin:0 auto;}
+.signup-wrap input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:13px;padding:11px 16px;outline:none;transition:border-color 0.2s,box-shadow 0.2s;}
+.signup-wrap input::placeholder{color:var(--muted);}
+.signup-wrap input:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(63,185,80,0.1);}
+.btn-primary{background:var(--green);color:#0e1117;border:none;font-family:var(--mono);font-size:13px;font-weight:600;padding:11px 20px;border-radius:6px;cursor:pointer;transition:all 0.15s;white-space:nowrap;}
+.btn-primary:hover{background:#46c957;transform:translateY(-1px);box-shadow:0 4px 12px rgba(63,185,80,0.25);}
+.signup-note{font-size:11px;color:var(--muted);margin-top:10px;text-align:center;}
+
+.pills{display:flex;justify-content:center;gap:10px;margin-top:28px;flex-wrap:wrap;}
+.pill{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);background:var(--surface);border:1px solid var(--border-subtle);padding:5px 12px;border-radius:20px;}
+.pill-dot{width:5px;height:5px;border-radius:50%;background:var(--green);flex-shrink:0;}
+
+/* PAIN */
+.pain-section{border-top:1px solid var(--border-subtle);border-bottom:1px solid var(--border-subtle);background:var(--surface);}
+.pain-inner{max-width:860px;margin:0 auto;padding:48px 40px;display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center;}
+.pain-left h2{font-family:var(--serif);font-size:clamp(22px,3vw,34px);font-weight:600;line-height:1.2;margin-bottom:16px;}
+.pain-left h2 em{font-style:italic;font-weight:300;color:var(--red);}
+.pain-left p{font-size:13px;color:var(--muted);line-height:1.8;}
+.pain-stats{display:flex;flex-direction:column;gap:12px;}
+.pain-stat{background:rgba(248,81,73,0.06);border:1px solid rgba(248,81,73,0.15);border-radius:6px;padding:14px 18px;display:flex;align-items:center;gap:14px;}
+.pain-stat-num{font-family:var(--serif);font-size:28px;font-style:italic;color:var(--red);line-height:1;flex-shrink:0;}
+.pain-stat-label{font-size:12px;color:var(--muted);line-height:1.5;}
+
+/* DEMO */
+.demo-section{max-width:900px;margin:0 auto;padding:56px 40px;}
+.demo-label{font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--blue);margin-bottom:16px;display:flex;align-items:center;gap:10px;}
+.demo-label::before{content:'';width:16px;height:1px;background:var(--blue);}
+.gif-placeholder{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:20px;}
+.gif-bar{background:var(--surface2);border-bottom:1px solid var(--border);padding:10px 14px;display:flex;align-items:center;gap:8px;}
+.dot{width:10px;height:10px;border-radius:50%;}
+.dot.r{background:#ff5f57;}.dot.y{background:#ffbd2e;}.dot.g{background:#28c840;}
+
+.pr-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+.pr-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;background:var(--surface2);flex-wrap:wrap;}
+.pr-num{font-size:12px;color:var(--muted);}
+.pr-title{font-size:14px;font-weight:500;flex:1;}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:500;}
+.b-open{background:rgba(63,185,80,0.12);color:var(--green);border:1px solid rgba(63,185,80,0.25);}
+.b-risk{background:rgba(248,81,73,0.1);color:var(--red);border:1px solid rgba(248,81,73,0.2);}
+.pr-body{display:grid;grid-template-columns:1fr 1fr;}
+.pr-col{padding:20px;border-right:1px solid var(--border);}
+.pr-col:last-child{border-right:none;}
+.col-head{font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:6px;}
+.cdot{width:5px;height:5px;border-radius:50%;}
+.cdot-g{background:var(--green);}
+.cdot-r{background:var(--red);}
+.cdot-b{background:var(--blue);}
+.s-list{display:flex;flex-direction:column;gap:9px;}
+.s-item{display:flex;gap:8px;font-size:12px;line-height:1.5;color:var(--muted);}
+.s-item::before{content:'·';color:var(--green);flex-shrink:0;font-size:16px;line-height:1.2;}
+.s-item code{color:var(--blue);font-size:11px;}
+.r-item{background:rgba(248,81,73,0.05);border:1px solid rgba(248,81,73,0.12);border-radius:5px;padding:10px 12px;margin-bottom:8px;}
+.r-title{font-size:12px;font-weight:500;color:var(--red);margin-bottom:3px;}
+.r-body{font-size:11px;color:var(--muted);line-height:1.5;}
+.q-list{display:flex;flex-direction:column;gap:6px;margin-top:16px;}
+.q-item{background:rgba(88,166,255,0.05);border:1px solid rgba(88,166,255,0.1);border-radius:5px;padding:8px 12px;font-size:11px;color:var(--blue);line-height:1.5;}
+.q-item::before{content:'Q  ';opacity:0.5;}
+
+/* HOW */
+.how-section{border-top:1px solid var(--border-subtle);background:var(--surface);}
+.how-inner{max-width:860px;margin:0 auto;padding:48px 40px;}
+.how-inner h2{font-family:var(--serif);font-size:clamp(22px,3vw,34px);font-weight:600;text-align:center;margin-bottom:36px;}
+.how-inner h2 em{font-style:italic;font-weight:300;color:var(--green);}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border-subtle);border:1px solid var(--border-subtle);border-radius:8px;overflow:hidden;}
+.step{background:var(--bg);padding:28px 24px;}
+.step-n{font-family:var(--serif);font-size:36px;font-style:italic;color:rgba(63,185,80,0.2);line-height:1;margin-bottom:12px;}
+.step h3{font-size:13px;font-weight:600;margin-bottom:8px;}
+.step p{font-size:12px;color:var(--muted);line-height:1.7;}
+
+/* TRUST */
+.trust-section{max-width:860px;margin:0 auto;padding:48px 40px;}
+.trust-box{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:28px 32px;}
+.trust-box h3{font-size:13px;font-weight:600;color:var(--text);margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.trust-box h3::before{content:'🔒';}
+.trust-items{display:flex;flex-direction:column;gap:10px;}
+.trust-item{display:flex;gap:10px;font-size:13px;color:var(--muted);line-height:1.6;}
+.trust-item::before{content:'✓';color:var(--green);flex-shrink:0;font-weight:700;}
+
+/* BOTTOM CTA */
+.bottom-cta{text-align:center;padding:72px 40px;border-top:1px solid var(--border-subtle);background:radial-gradient(ellipse at 50% 0%,rgba(63,185,80,0.05) 0%,transparent 55%);}
+.bottom-cta h2{font-family:var(--serif);font-size:clamp(26px,4vw,48px);font-weight:600;margin-bottom:10px;line-height:1.1;}
+.bottom-cta h2 em{font-style:italic;font-weight:300;color:var(--green);}
+.bottom-cta p{color:var(--muted);font-size:13px;margin-bottom:28px;}
+.bottom-cta .signup-wrap{justify-content:center;}
+
+footer{border-top:1px solid var(--border-subtle);padding:20px 40px;display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--muted);}
+.footer-links{display:flex;gap:20px;}
+.footer-links a{color:var(--muted);text-decoration:none;transition:color 0.2s;}
+.footer-links a:hover{color:var(--text);}
+
+.reveal{opacity:0;transform:translateY(16px);transition:opacity 0.55s ease,transform 0.55s ease;}
+.reveal.visible{opacity:1;transform:none;}
+
+@media(max-width:680px){
+  nav{padding:0 20px;}
+  .hero,.demo-section,.trust-section,.bottom-cta{padding-left:20px;padding-right:20px;}
+  .hero{padding-top:48px;}
+  h1{font-size:32px;}
+  .pain-inner{grid-template-columns:1fr;gap:28px;padding:36px 20px;}
+  .how-inner{padding:36px 20px;}
+  .steps{grid-template-columns:1fr;}
+  .pr-body{grid-template-columns:1fr;}
+  .pr-col{border-right:none;border-bottom:1px solid var(--border);}
+  .signup-wrap{flex-direction:column;}
+  footer{flex-direction:column;gap:10px;text-align:center;padding:20px;}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">
+    <div class="logo-icon">R</div>
+    ReviewLens<span>.dev</span>
+  </div>
+  <a href="#signup" class="nav-cta">Join early access</a>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="eyebrow">Chrome Extension — Early Access Q3 2026</div>
+
+  <!-- ← CHANGED: problem stated first, solution second -->
+  <h1>Stop reading 800-line PRs.<br><em>Understand them in 30 seconds.</em></h1>
+
+  <!-- ← CHANGED: no-setup line moved directly under headline -->
+  <p class="no-setup">Chrome extension<span>·</span>No repo integration<span>·</span>No CI setup</p>
+
+  <p class="subhead">
+    <strong>ReviewLens</strong> sits on every GitHub PR page and gives you an instant summary of what changed, what's risky, and what to ask — without reading the full diff.
+  </p>
+
+  <div class="trust-line">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    Runs in your browser. No code is stored or transmitted.
+  </div>
+
+  <div class="signup-wrap" id="signup">
+    <input type="email" id="hero-email" placeholder="you@company.com" />
+    <!-- ← CHANGED: "Join" not "Get" -->
+    <button class="btn-primary" onclick="joinWaitlist('hero-email',this)">Join early access →</button>
+  </div>
+  <p class="signup-note">Free to install at launch. No card required.</p>
+
+  <div class="pills">
+    <div class="pill"><div class="pill-dot"></div>Works on any GitHub PR instantly</div>
+    <div class="pill"><div class="pill-dot"></div>Assists reviewers — doesn't replace them</div>
+    <div class="pill"><div class="pill-dot"></div>Open source core</div>
+  </div>
+</div>
+
+<!-- PAIN -->
+<div class="pain-section">
+  <div class="pain-inner reveal">
+    <div class="pain-left">
+      <h2>Large PRs are a<br><em>tax on your team</em></h2>
+      <p>Every hour spent deciphering a 900-line diff is an hour not spent building. The problem compounds at scale — the bigger the team, the more review debt accumulates.</p>
+    </div>
+    <div class="pain-stats">
+      <!-- ← CHANGED: removed fake "47m" stat, replaced with verifiable behavioral claims -->
+      <div class="pain-stat">
+        <div class="pain-stat-num">400+</div>
+        <div class="pain-stat-label">Lines is where PRs get significantly harder to review thoroughly — context overflows working memory</div>
+      </div>
+      <div class="pain-stat">
+        <div class="pain-stat-num">↑ Risk</div>
+        <div class="pain-stat-label">Critical issues — missing auth, broken error handling — are easier to miss when diffs are long and scattered</div>
+      </div>
+      <div class="pain-stat">
+        <div class="pain-stat-num">1 click</div>
+        <div class="pain-stat-label">That's all ReviewLens needs to show you what actually matters in any PR</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DEMO -->
+<div class="demo-section">
+  <div class="demo-label">What appears on every PR page</div>
+
+  <div class="gif-placeholder reveal" style="margin-bottom:16px;">
+    <div class="gif-bar">
+      <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+      <span style="flex:1;text-align:center;font-size:11px;color:var(--muted);">github.com/your-org/repo/pull/2847</span>
+    </div>
+    <div style="padding:20px 0 12px;text-align:center;">
+      <div style="display:inline-flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);border:1px dashed var(--border);padding:12px 24px;border-radius:6px;">
+        <span style="font-size:18px;">🎬</span>
+        <span>Drop screen recording here — open PR → click → summary in &lt;8s</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="pr-card reveal">
+    <div class="pr-header">
+      <span class="pr-num">#2847</span>
+      <span class="pr-title">feat: add Stripe billing + subscription management + webhook handler</span>
+      <span class="badge b-open">● Open</span>
+      <span class="badge b-risk">⚠ 2 risks</span>
+    </div>
+    <div class="pr-body">
+      <div class="pr-col">
+        <div class="col-head"><div class="cdot cdot-g"></div>What changed</div>
+        <div class="s-list">
+          <div class="s-item">Adds Stripe Checkout + subscription lifecycle via <code>stripe-node</code> v13</div>
+          <div class="s-item">New webhook handler at <code>POST /webhooks/stripe</code> — 6 event types</div>
+          <div class="s-item">Customer portal added — users self-manage plans without support</div>
+          <div class="s-item">Subscription gating on 4 existing endpoints via <code>requireActiveSubscription</code> middleware</div>
+          <div class="s-item" style="color:var(--red);">+847 lines across 14 files · <strong>No test coverage added</strong></div>
+        </div>
+      </div>
+      <div class="pr-col" style="display:flex;flex-direction:column;gap:16px;">
+        <div>
+          <div class="col-head"><div class="cdot cdot-r"></div>Risk areas</div>
+          <div class="r-item">
+            <div class="r-title">⚠ Webhook signature not verified</div>
+            <div class="r-body">Events accepted without <code style="font-size:10px;">stripe.webhooks.constructEvent()</code> — spoofed events could alter billing state.</div>
+          </div>
+          <div class="r-item">
+            <div class="r-title">⚠ No idempotency on webhook handler</div>
+            <div class="r-body">Duplicate <code style="font-size:10px;">invoice.paid</code> events could double-credit accounts. No event ID deduplication.</div>
+          </div>
+        </div>
+        <div>
+          <div class="col-head"><div class="cdot cdot-b"></div>Questions to ask</div>
+          <div class="q-list">
+            <div class="q-item">Have we tested webhook retry behavior in staging?</div>
+            <div class="q-item">What happens to active sessions when a subscription lapses mid-request?</div>
+            <div class="q-item">Are Stripe keys scoped correctly — test vs. prod confirmed?</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<div class="how-section">
+  <div class="how-inner reveal">
+    <h2>Works in <em>one click</em></h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-n">1</div>
+        <h3>Open any GitHub PR</h3>
+        <p>ReviewLens appears automatically in the sidebar of every pull request page. No configuration. No permissions beyond reading the page.</p>
+      </div>
+      <div class="step">
+        <div class="step-n">2</div>
+        <h3>Click "Summarize"</h3>
+        <p>The extension reads the diff and comments already loaded in your browser. Nothing is sent anywhere. Inference runs locally.</p>
+      </div>
+      <div class="step">
+        <div class="step-n">3</div>
+        <h3>Review smarter</h3>
+        <p>Summary, risks, and questions in under 8 seconds. You still make every call — ReviewLens removes the cognitive load of getting there.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TRUST -->
+<div class="trust-section reveal">
+  <div class="trust-box">
+    <h3>How your code stays private</h3>
+    <div class="trust-items">
+      <div class="trust-item">ReviewLens reads the PR page your browser already loaded — it makes no separate API calls to GitHub or any other server.</div>
+      <div class="trust-item">Inference runs locally inside the Chrome extension. No source code, diff content, or review comments are ever transmitted or stored.</div>
+      <div class="trust-item">We have no backend that receives repository data. There is nothing to breach, sell, or subpoena.</div>
+      <div class="trust-item">The extension core is open source. Audit exactly what it does before installing.</div>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM CTA -->
+<div class="bottom-cta">
+  <h2>Cut PR review time in <em>half</em></h2>
+  <p>Free to install at launch. Join early access to get notified first.</p>
+  <div class="signup-wrap">
+    <input type="email" id="footer-email" placeholder="you@company.com" />
+    <button class="btn-primary" onclick="joinWaitlist('footer-email',this)">Join early access →</button>
+  </div>
+  <p class="signup-note" style="margin-top:10px;">No card required. Unsubscribe anytime.</p>
+</div>
+
+<footer>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <div style="width:20px;height:20px;background:var(--green);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#0e1117;font-weight:700;">R</div>
+    <span>ReviewLens.dev</span>
+  </div>
+  <div class="footer-links">
+    <a href="#">Privacy</a>
+    <a href="#">Open source</a>
+    <a href="/cdn-cgi/l/email-protection#cea6aba2a2a18ebcabb8a7abb9a2aba0bde0aaabb8">Contact</a>
+  </div>
+  <span>© 2026 ReviewLens</span>
+</footer>
+
+<script>
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
+}, {threshold: 0.07});
+document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+
+async function joinWaitlist(inputId, btn) {
+  const input = document.getElementById(inputId);
+  const email = input.value.trim();
+  if (!email || !email.includes('@')) {
+    input.style.borderColor = 'var(--red)';
+    input.style.boxShadow = '0 0 0 3px rgba(248,81,73,0.12)';
+    setTimeout(() => { input.style.borderColor=''; input.style.boxShadow=''; }, 1400);
+    return;
+  }
+
+  btn.textContent = 'Joining...';
+  btn.disabled = true;
+  input.disabled = true;
+
+  try {
+    const res = await fetch('https://api.convertkit.com/v3/forms/9208759/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        api_key: '0B-3yrcgMqXNGk7N-0CICg',
+        email: email
+      })
+    });
+    const data = await res.json();
+    if (res.ok && data.subscription) {
+      btn.textContent = '\u2713 You\'re on the list';
+      btn.style.background = '#2ea043';
+    } else {
+      throw new Error('failed');
+    }
+  } catch (err) {
+    btn.textContent = 'Try again';
+    btn.style.background = 'var(--red)';
+    btn.disabled = false;
+    input.disabled = false;
+    setTimeout(() => {
+      btn.textContent = 'Join early access \u2192';
+      btn.style.background = 'var(--green)';
+    }, 2500);
+  }
+}
+</script>
+</body>
+</html>
