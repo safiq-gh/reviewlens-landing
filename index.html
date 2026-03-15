@@ -370,7 +370,7 @@ async function joinWaitlist(inputId, btn) {
   input.disabled = true;
 
   try {
-    const res = await fetch('https://api.convertkit.com/v3/forms/9208759/subscribe', {
+    const res = await fetch('https://api.kit.com/v3/forms/9208759/subscribe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
